@@ -20,4 +20,4 @@ add_test(sync_to_test            env BUNDLE_GEMFILE=../../test/Gemfile bundle ex
 
 # we also have a performance test utility that is not run as part of the test suite because there's no particular pass/fail criteria
 add_executable(ks_bench ks_bench.cpp ../src/xxHash/xxhash.cpp)
-target_link_libraries(ks_bench ${OPENSSL_LIBRARIES})
+target_link_libraries(ks_bench ${OPENSSL_LIBRARIES} ${BLAKE2_LIBRARIES})

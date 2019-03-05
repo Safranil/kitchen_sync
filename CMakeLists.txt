@@ -50,6 +50,10 @@ add_subdirectory(src/yaml-cpp EXCLUDE_FROM_ALL)
 include_directories(src/yaml-cpp/include)
 set(YamlCPP_LIBRARIES yaml-cpp)
 
+# compile vendored-in version of blake2 as a static library
+add_subdirectory(src/libb2)
+set(BLAKE2_LIBRARIES blake2-static)
+
 # the main program knows nothing but how to hook up the endpoints
 set(ks_SRCS src/ks.cpp src/db_url.cpp src/process.cpp src/unidirectional_pipe.cpp)
 add_executable(ks ${ks_SRCS})
@@ -74,7 +78,7 @@ endif()
 
 # the endpoints do the actual work
 set(ks_endpoint_SRCS src/schema.cpp src/subdivision.cpp src/filters.cpp src/abortable_barrier.cpp src/xxHash/xxhash.cpp)
-set(ks_endpoint_LIBS ${OPENSSL_LIBRARIES} ${YamlCPP_LIBRARIES})
+set(ks_endpoint_LIBS ${OPENSSL_LIBRARIES} ${BLAKE2_LIBRARIES} ${YamlCPP_LIBRARIES})
 
 # turn on debugging symbols
 set(CMAKE_BUILD_TYPE Debug)

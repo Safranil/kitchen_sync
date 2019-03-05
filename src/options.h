@@ -85,7 +85,8 @@ struct Options {
 			"                             would use are printed as suggestions.)"
 			"\n"
 			"  --hash arg                 Use the specified checksum algorithm.  The default\n"
-			"                             is MD5.  You can downgrade to XXH64 if you are more\n"
+			"                             is MD5.  You can upgrade to BLAKE2 which is stronger.\n"
+			"                             You can downgrade to XXH64 if you are more\n"
 			"                             interested in performance than data integrity.\n"
 			"                             This is not considered appropriate for production\n"
 			"                             use, but may be useful for dev/test machines.\n"
@@ -217,6 +218,8 @@ struct Options {
 							hash_algorithm = HashAlgorithm::md5;
 						} else if (!strcmp(optarg, "XXH64")) {
 							hash_algorithm = HashAlgorithm::xxh64;
+						} else if (!strcmp(optarg, "BLAKE2")) {
+							hash_algorithm = HashAlgorithm::blake2b;
 						} else {
 							throw invalid_argument("Unknown hash algorithm: " + string(optarg));
 						}

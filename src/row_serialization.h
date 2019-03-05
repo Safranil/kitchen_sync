@@ -11,6 +11,8 @@
 #define XXH_STATIC_LINKING_ONLY
 #include "xxHash/xxhash.h"
 
+#include "libb2/src/blake2.h"
+
 #include "hash_algorithm.h"
 #include "message_pack/pack.h"
 #include "message_pack/packed_value.h"
@@ -42,7 +44,8 @@ struct RowPacker {
 	Packer<OutputStream> &packer;
 };
 
-#define MAX_DIGEST_LENGTH MD5_DIGEST_LENGTH
+#define BLAKE2B_DIGEST_LENGTH 32 // by choice
+#define MAX_DIGEST_LENGTH BLAKE2B_DIGEST_LENGTH
 
 struct Hash {
 	inline Hash(): md_len(0) {}
@@ -86,6 +89,10 @@ struct RowHasher {
 			case HashAlgorithm::xxh64:
 				XXH64_reset(&xxh64_state, 0);
 				break;
+
+			case HashAlgorithm::blake2b:
+				blake2b_init(&blake2ctx, BLAKE2B_DIGEST_LENGTH);
+				break;
 		}
 	}
 
@@ -104,6 +111,10 @@ struct RowHasher {
 
 			case HashAlgorithm::xxh64:
 				XXH64_update(&xxh64_state, buf, bytes);
+				break;
+
+			case HashAlgorithm::blake2b:
+				blake2b_update(&blake2ctx, buf, bytes);
 				break;
 		}
 	}
@@ -124,6 +135,11 @@ struct RowHasher {
 				hash.md_value_64 = htonll(XXH64_digest(&xxh64_state));
 				return hash;
 
+			case HashAlgorithm::blake2b:
+				hash.md_len = BLAKE2B_DIGEST_LENGTH;
+				blake2b_final(&blake2ctx, hash.md_value, hash.md_len);
+				return hash;
+
 			default:
 				// never hit, but silence compiler warning
 				return hash;
@@ -134,6 +150,7 @@ struct RowHasher {
 	union {
 		MD5_CTX mdctx;
 		XXH64_state_t xxh64_state;
+		blake2b_state blake2ctx;
 	};
 	size_t size;
 	Packer<RowHasher> row_packer;
