@@ -6,6 +6,7 @@
 	#include <CommonCrypto/CommonDigest.h>
 #else
 	#include <openssl/md5.h>
+	#include <openssl/sha.h>
 #endif
 
 #define XXH_STATIC_LINKING_ONLY
@@ -42,7 +43,7 @@ struct RowPacker {
 	Packer<OutputStream> &packer;
 };
 
-#define MAX_DIGEST_LENGTH MD5_DIGEST_LENGTH
+#define MAX_DIGEST_LENGTH SHA512_DIGEST_LENGTH
 
 struct Hash {
 	inline Hash(): md_len(0) {}
@@ -83,6 +84,22 @@ struct RowHasher {
 				MD5_Init(&mdctx);
 				break;
 
+			case HashAlgorithm::sha224:
+				SHA256_Init(&sha256ctx);
+				break;
+
+			case HashAlgorithm::sha256:
+				SHA256_Init(&sha256ctx);
+				break;
+
+			case HashAlgorithm::sha384:
+				SHA384_Init(&sha512ctx);
+				break;
+
+			case HashAlgorithm::sha512:
+				SHA512_Init(&sha512ctx);
+				break;
+
 			case HashAlgorithm::xxh64:
 				XXH64_reset(&xxh64_state, 0);
 				break;
@@ -102,6 +119,22 @@ struct RowHasher {
 				MD5_Update(&mdctx, buf, bytes);
 				break;
 
+			case HashAlgorithm::sha224:
+				SHA256_Update(&sha256ctx, buf, bytes);
+				break;
+
+			case HashAlgorithm::sha256:
+				SHA256_Update(&sha256ctx, buf, bytes);
+				break;
+
+			case HashAlgorithm::sha384:
+				SHA384_Update(&sha512ctx, buf, bytes);
+				break;
+
+			case HashAlgorithm::sha512:
+				SHA512_Update(&sha512ctx, buf, bytes);
+				break;
+
 			case HashAlgorithm::xxh64:
 				XXH64_update(&xxh64_state, buf, bytes);
 				break;
@@ -119,6 +152,26 @@ struct RowHasher {
 				MD5_Final(hash.md_value, &mdctx);
 				return hash;
 
+			case HashAlgorithm::sha224:
+				hash.md_len = SHA224_DIGEST_LENGTH;
+				SHA224_Final(hash.md_value, &sha256ctx);
+				return hash;
+
+			case HashAlgorithm::sha256:
+				hash.md_len = SHA256_DIGEST_LENGTH;
+				SHA256_Final(hash.md_value, &sha256ctx);
+				return hash;
+
+			case HashAlgorithm::sha384:
+				hash.md_len = SHA384_DIGEST_LENGTH;
+				SHA384_Final(hash.md_value, &sha512ctx);
+				return hash;
+
+			case HashAlgorithm::sha512:
+				hash.md_len = SHA512_DIGEST_LENGTH;
+				SHA512_Final(hash.md_value, &sha512ctx);
+				return hash;
+
 			case HashAlgorithm::xxh64:
 				hash.md_len = sizeof(uint64_t);
 				hash.md_value_64 = htonll(XXH64_digest(&xxh64_state));
@@ -133,6 +186,8 @@ struct RowHasher {
 	HashAlgorithm hash_algorithm;
 	union {
 		MD5_CTX mdctx;
+		SHA256_CTX sha256ctx;
+		SHA512_CTX sha512ctx;
 		XXH64_state_t xxh64_state;
 	};
 	size_t size;

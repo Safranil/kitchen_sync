@@ -26,8 +26,12 @@ double benchmark_one(T value, size_t columns, size_t rows, HashAlgorithm hash_al
 
 template <typename T>
 void benchmark(T value, size_t columns, size_t rows) {
-	cout << "MD5:      " << benchmark_one(value, columns, rows, HashAlgorithm::md5)   << "MB/s" << endl;
-	cout << "XXHASH64: " << benchmark_one(value, columns, rows, HashAlgorithm::xxh64) << "MB/s" << endl;
+	cout << "MD5:      " << benchmark_one(value, columns, rows, HashAlgorithm::md5)    << "MB/s" << endl;
+	cout << "SHA224:   " << benchmark_one(value, columns, rows, HashAlgorithm::sha224) << "MB/s" << endl;
+	cout << "SHA256:   " << benchmark_one(value, columns, rows, HashAlgorithm::sha256) << "MB/s" << endl;
+	cout << "SHA384:   " << benchmark_one(value, columns, rows, HashAlgorithm::sha384) << "MB/s" << endl;
+	cout << "SHA512:   " << benchmark_one(value, columns, rows, HashAlgorithm::sha512) << "MB/s" << endl;
+	cout << "XXHASH64: " << benchmark_one(value, columns, rows, HashAlgorithm::xxh64)  << "MB/s" << endl;
 	cout << endl;
 }
 
