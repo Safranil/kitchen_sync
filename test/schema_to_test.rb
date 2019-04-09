@@ -298,7 +298,7 @@ class SchemaToTest < KitchenSync::EndpointTestCase
   end
 
 
-  test_each "complains if there's a table that has no unique key with only non-nullable columns" do
+  test_each "complains if there's a table that has nullable columns and no unique key with only non-nullable columns" do
     clear_schema
     create_noprimarytbl(create_suitable_keys: false)
     create_secondtbl
@@ -341,6 +341,31 @@ class SchemaToTest < KitchenSync::EndpointTestCase
     expect_command Commands::RANGE, ["secondtbl"]
     send_command   Commands::RANGE, ["secondtbl", [], []]
     read_command
+  end
+
+  test_each "doesn't complain if there's a table that has no primary key or unique keys but that has only non-nullable columns" do
+    clear_schema
+    create_noprimaryjointbl(create_keys: true)
+
+    expect_handshake_commands
+    expect_command Commands::SCHEMA
+    send_command   Commands::SCHEMA, ["tables" => [noprimaryjointbl_def(create_keys: true)]]
+    expect_sync_start_commands
+    expect_command Commands::RANGE, ["noprimaryjointbl"]
+    send_command   Commands::RANGE, ["noprimaryjointbl", [], []]
+    read_command
+  end
+
+  test_each "complains if there's a table that has no primary key or unique keys but that has only non-nullable columns and no keys" do
+    clear_schema
+    create_noprimaryjointbl(create_keys: false)
+
+    expect_handshake_commands
+    expect_stderr("Couldn't find a primary or non-nullable unique key on table noprimaryjointbl") do
+      expect_command Commands::SCHEMA
+      send_command   Commands::SCHEMA, ["tables" => [noprimaryjointbl_def(create_keys: false)]]
+      read_command rescue nil
+    end
   end
 
   test_each "doesn't complain if there's an ignored table that has on unsupported column type" do

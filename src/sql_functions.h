@@ -133,11 +133,22 @@ string retrieve_rows_sql(DatabaseClient &client, const Table &table, const Colum
 		result += column->name;
 		result += client.quote_identifiers_with();
 	}
+	if (table.group_and_count_entire_row()) {
+		result += ", COUNT(*)";
+	}
 
 	result += " FROM ";
 	result += table.name;
 
 	result += where_sql(client, table, prev_key, last_key, table.where_conditions);
+
+	if (table.group_and_count_entire_row()) {
+		result += " GROUP BY ";
+		for (size_t n = 1; n <= table.columns.size(); n++) {
+			if (n > 1) result += ", ";
+			result += to_string(n); // we use the ordinal (position) syntax rather than column names to avoid ambiguity as to whether input or output column will be used if there is a filter expression
+		}
+	}
 
 	result += column_orders_list(client, table.columns, table.primary_key_columns);
 
