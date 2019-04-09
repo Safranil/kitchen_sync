@@ -59,6 +59,26 @@ class SchemaFromTest < KitchenSync::EndpointTestCase
                    [{"tables" => [noprimaryjointbl_def(create_keys: true)]}]
   end
 
+  test_each "selects the longest key if there is no primary key and no unique key but there are only non-nullable columns" do
+    clear_schema
+    create_noprimaryjointbl(create_keys: :partial)
+    send_handshake_commands
+
+    send_command   Commands::SCHEMA
+    expect_command Commands::SCHEMA,
+                   [{"tables" => [noprimaryjointbl_def(create_keys: :partial)]}]
+  end
+
+  test_each "selects the natural column order if there is no primary key and no unique key but there are only non-nullable columns with no keys" do
+    clear_schema
+    create_noprimaryjointbl(create_keys: false)
+    send_handshake_commands
+
+    send_command   Commands::SCHEMA
+    expect_command Commands::SCHEMA,
+                   [{"tables" => [noprimaryjointbl_def(create_keys: false)]}]
+  end
+
   test_each "shows the default values for columns" do
     clear_schema
     create_defaultstbl

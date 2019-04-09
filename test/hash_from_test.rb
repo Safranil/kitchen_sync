@@ -135,6 +135,35 @@ class HashFromTest < KitchenSync::EndpointTestCase
     expect_command Commands::HASH, ["noprimaryjointbl", @keys[0], @keys[1], 1000, 1, hash_of(@rows[1..1])]
   end
 
+  test_each "uses the natural column order and adds a row count if the table has no real primary key or suitable unique key but has only non-nullable columns with no useful index" do
+    clear_schema
+    create_noprimaryjointbl(create_keys: false)
+    execute "INSERT INTO noprimaryjointbl (table1_id, table2_id) VALUES (1, 100), (1, 101), (2, 101), (3, 9), (3, 10), (3, 10), (3, 11)"
+    @rows = [[1, 100, 1],
+             [1, 101, 1],
+             [2, 101, 1],
+             [3, 9, 1],
+             [3, 10, 2],
+             [3, 11, 1]]
+    @keys = @rows.collect {|row| [row[0], row[1]]}
+    send_handshake_commands
+
+    send_command   Commands::HASH, ["noprimaryjointbl",       [], @keys[0], 1000]
+    expect_command Commands::HASH, ["noprimaryjointbl",       [], @keys[0], 1000, 1, hash_of(@rows[0..0])]
+
+    send_command   Commands::HASH, ["noprimaryjointbl",       [], @keys[4], 1000]
+    expect_command Commands::HASH, ["noprimaryjointbl",       [], @keys[4], 1000, 5, hash_of(@rows[0..4])] # note row count is 5 when in fact there were 6 underlying database rows
+
+    send_command   Commands::HASH, ["noprimaryjointbl",       [], @keys[-1], 5]
+    expect_command Commands::HASH, ["noprimaryjointbl",       [], @keys[-1], 5, 5, hash_of(@rows[0..4])] # note includes the sixth input row even though the row limit was set to 5
+
+    send_command   Commands::HASH, ["noprimaryjointbl",       [], @keys[-1], 6]
+    expect_command Commands::HASH, ["noprimaryjointbl",       [], @keys[-1], 6, 6, hash_of(@rows)]
+
+    send_command   Commands::HASH, ["noprimaryjointbl", @keys[0], @keys[1], 1000]
+    expect_command Commands::HASH, ["noprimaryjointbl", @keys[0], @keys[1], 1000, 1, hash_of(@rows[1..1])]
+  end
+
   test_each "optionally supports xxHash64 hashes" do
     setup_with_footbl(1, HashAlgorithm::XXH64)
 

@@ -194,6 +194,7 @@ SQL
         table1_id INT NOT NULL,
         table2_id INT NOT NULL)
 SQL
+    execute "ALTER TABLE noprimaryjointbl ADD COLUMN created_at #{@database_server == 'postgresql' ? 'timestamp' : 'DATETIME'} NOT NULL" if create_keys == :partial
     execute "CREATE INDEX index_by_table1_id ON noprimaryjointbl (table1_id)" if create_keys
     execute "CREATE INDEX index_by_table2_id ON noprimaryjointbl (table2_id, table1_id)" if create_keys
   end
@@ -204,7 +205,11 @@ SQL
         {"name" => "table1_id", "column_type" => ColumnTypes::SINT, "size" => 4, "nullable" => false},
         {"name" => "table2_id", "column_type" => ColumnTypes::SINT, "size" => 4, "nullable" => false},
         ({"name" => "created_at", "column_type" => ColumnTypes::DTTM,              "nullable" => false} if create_keys == :partial)].compact,
-      "primary_key_columns" => create_keys ? [1, 0] : [], # if index_by_table2_id exists, it will be chosen, and it happens to have the reverse order
+      "primary_key_columns" => case create_keys
+                               when true  then [1, 0] # if index_by_table2_id exists, it will be chosen, and it happens to have the reverse order
+                               when false then [0, 1] # otherwise the columns will be used in order, without any index
+                               when :partial then [1, 0, 2] # if there's extra columns not in any index, the longest index should still be used and the other columns added
+                               end,
       "primary_key_type" => PrimaryKeyType::ENTIRE_ROW_AS_KEY,
       "keys" => create_keys ? [
         {"name" => "index_by_table1_id", "unique" => false, "columns" => [0]},
