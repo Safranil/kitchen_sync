@@ -55,11 +55,19 @@ struct SyncToProtocol {
 			cout << "starting " << table_job->table.name << endl << flush;
 		}
 
-		// start by scoping out the table
-		if (worker.verbose > 1) cout << timestamp() << " worker " << worker.worker_number << " <- range " << table_job->table.name << endl;
-		send_command(output, Commands::RANGE, table_job->table.name);
-		if (input.next<verb_t>() != Commands::RANGE) throw command_error("Didn't receive response to RANGE command");
-		handle_range_response(table_job, row_replacer);
+		if (table_job->table.primary_key_type == no_available_key) {
+			// special case - no primary key, no suitable unique key, and nullable columns, so we can't reliably query for ranges of this table
+			// switch to the dumb approach of doing a full reload
+			if (worker.verbose) cout << "not possible to detect differences in " << table_job->table.name << " because it has no primary key and no other suitable keys.  clearing and reloading this table." << endl;
+			client.execute("DELETE FROM " + table_job->table.name);
+			request_rows_without_pipelining(table_job, row_replacer, KeyRange());
+		} else {
+			// start by scoping out the table
+			if (worker.verbose > 1) cout << timestamp() << " worker " << worker.worker_number << " <- range " << table_job->table.name << endl;
+			send_command(output, Commands::RANGE, table_job->table.name);
+			if (input.next<verb_t>() != Commands::RANGE) throw command_error("Didn't receive response to RANGE command");
+			handle_range_response(table_job, row_replacer);
+		}
 	}
 
 	void finish_sync_table(const shared_ptr<TableJob> &table_job, size_t rows_changed) {

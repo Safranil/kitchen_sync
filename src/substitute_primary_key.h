@@ -3,6 +3,13 @@
 
 #include <set>
 
+inline bool any_column_nullable(const Table &table) {
+	for (const Column &column : table.columns) {
+		if (column.nullable) return true;
+	}
+	return false;
+}
+
 inline bool any_column_nullable(const Table &table, const ColumnIndices &columns) {
 	for (size_t column : columns) {
 		if (table.columns[column].nullable) return true;
@@ -23,21 +30,16 @@ inline void choose_primary_key_for(Table &table) {
 		}
 	}
 
-	// if there's no unique key usable as a pseudo-primary key, we can try to treat the whole row as
-	// if it were the primary key and group and count to spot duplicates.
-	for (const Column &column : table.columns) {
-		// that's only possible if there are no nullable columns, though; otherwise we can't query
-		// based on key ranges, since the comparison operators like > and <= will return NULL for any
-		// comparisons involving NULL values
-		if (column.nullable) return;
-	}
+	// if there's no usable key, we want to treat the whole row as if it were the primary key (and group and count to
+	// spot duplicates).  that's only possible if there are no nullable columns, though; otherwise we can't query based
+	// on key ranges, since the comparison operators like > and <= will return NULL for any comparisons involving NULL
+	// values, so we can't query based on even the entire row values for anything other than a point (equality) comparison.
+	table.primary_key_type = any_column_nullable(table) ? no_available_key : entire_row_as_key;
 
-	// ok, no nullable columns, so we can use the whole row as its own primary key
-	table.primary_key_type = entire_row_as_key;
-
-	// tables like that are potentially very slow to query because the database may not have any good way to sort the rows,
-	// and we can't assume that it will happen to serve them up in the same order at both ends; try to find an index with
-	// all the columns in it, and if found use that order; take the longest index available if none covers all columns.
+	// tables with no explicit or suitable substitute primary key are potentially very slow to query because the database
+	// may not have any good way to sort the rows, and we can't assume that it will happen to serve them up in the same
+	// order at both ends; try to find an index with all the columns in it, and if found use that order; take the longest
+	// index available if none covers all columns.
 	for (const Key &key : table.keys) {
 		if (key.columns.size() > table.primary_key_columns.size()) {
 			table.primary_key_columns = key.columns;

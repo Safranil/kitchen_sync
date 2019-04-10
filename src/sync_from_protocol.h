@@ -4,6 +4,7 @@
 #include "hash_algorithm.h"
 #include "sync_error.h"
 #include "defaults.h"
+#include "sql_functions.h"
 
 template <class Worker, class DatabaseClient>
 struct SyncFromProtocol {
@@ -109,14 +110,16 @@ struct SyncFromProtocol {
 	}
 
 	void send_rows(const Table &table, ColumnValues prev_key, const ColumnValues &last_key) {
-		// we limit individual queries to an arbitrary limit of 10000 rows, to reduce annoying slow
-		// queries that would otherwise be logged on the server and reduce buffering.
-		const int BATCH_SIZE = 10000;
 		RowPackerAndLastKey<FDWriteStream> row_packer(output, table.primary_key_columns);
 
+		// we limit individual queries to an arbitrary limit of 10000 rows, to reduce annoying slow
+		// queries that would otherwise be logged on the server and reduce buffering. but the batching
+		// strategy doesn't work consistently unless there's a primary key or suitable substitute
+		ssize_t batch_size = table.primary_key_type == no_available_key ? NO_ROW_COUNT_LIMIT : 10000;
+
 		while (true) {
-			size_t row_count = retrieve_rows(worker.client, row_packer, table, prev_key, last_key, BATCH_SIZE);
-			if (row_count < BATCH_SIZE) break;
+			size_t row_count = retrieve_rows(worker.client, row_packer, table, prev_key, last_key, batch_size);
+			if (row_count != batch_size) break;
 			prev_key = row_packer.last_key;
 		}
 	}

@@ -298,7 +298,7 @@ class SchemaToTest < KitchenSync::EndpointTestCase
   end
 
 
-  test_each "complains if there's a table that has nullable columns and no unique key with only non-nullable columns" do
+  test_each "uses all the columns as the key to control the sort order if there's a table that has nullable columns and no unique key" do
     clear_schema
     create_noprimarytbl(create_suitable_keys: false)
     create_secondtbl
@@ -306,10 +306,13 @@ class SchemaToTest < KitchenSync::EndpointTestCase
     expect_handshake_commands
     expect_command Commands::SCHEMA
 
-    expect_stderr("Couldn't find a primary or non-nullable unique key on table noprimarytbl") do
-      send_command Commands::SCHEMA, ["tables" => [noprimarytbl_def(create_suitable_keys: false), secondtbl_def]]
-      read_command rescue nil
-    end
+    send_command Commands::SCHEMA, ["tables" => [noprimarytbl_def(create_suitable_keys: false), secondtbl_def]]
+    expect_sync_start_commands
+    expect_command Commands::ROWS, ["noprimarytbl", [], []]
+    send_command   Commands::ROWS, ["noprimarytbl", [], []]
+    expect_command Commands::RANGE, ["secondtbl"]
+    send_command   Commands::RANGE, ["secondtbl", [], []]
+    read_command
   end
 
   test_each "doesn't complain if there's a table that has no primary key but that has unique key with only non-nullable columns" do

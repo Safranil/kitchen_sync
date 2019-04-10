@@ -226,6 +226,7 @@ struct SyncToWorker {
 	void check_tables_usable() {
 		for (const Table &table : database.tables) {
 			if (table.primary_key_columns.empty()) {
+				// this indicates the 'from' end is an older version, because these days we always choose a key column order, even in the no_available_key case
 				throw runtime_error("Couldn't find a primary or non-nullable unique key on table " + table.name);
 			}
 			for (const Column &column : table.columns) {
