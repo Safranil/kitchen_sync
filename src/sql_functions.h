@@ -118,9 +118,11 @@ inline string where_sql(DatabaseClient &client, const Table &table, const Column
 	return where_sql(client, table, " > ", prev_key, " <= ", last_key, "", ColumnValues(), extra_where_conditions);
 }
 
+const ssize_t NO_ROW_COUNT_LIMIT = -1;
+
 template <typename DatabaseClient>
-string select_columns_sql(DatabaseClient &client, const Table &table) {
-	string result;
+string retrieve_rows_sql(DatabaseClient &client, const Table &table, const ColumnValues &prev_key, const ColumnValues &last_key, ssize_t row_count = NO_ROW_COUNT_LIMIT) {
+	string result("SELECT ");
 	for (Columns::const_iterator column = table.columns.begin(); column != table.columns.end(); ++column) {
 		if (column != table.columns.begin()) result += ", ";
 		if (!column->filter_expression.empty()) {
@@ -131,19 +133,14 @@ string select_columns_sql(DatabaseClient &client, const Table &table) {
 		result += column->name;
 		result += client.quote_identifiers_with();
 	}
-	return result;
-}
 
-const ssize_t NO_ROW_COUNT_LIMIT = -1;
-
-template <typename DatabaseClient>
-string retrieve_rows_sql(DatabaseClient &client, const Table &table, const ColumnValues &prev_key, const ColumnValues &last_key, ssize_t row_count = NO_ROW_COUNT_LIMIT) {
-	string result("SELECT ");
-	result += select_columns_sql(client, table);
 	result += " FROM ";
 	result += table.name;
+
 	result += where_sql(client, table, prev_key, last_key, table.where_conditions);
+
 	result += column_orders_list(client, table.columns, table.primary_key_columns);
+
 	if (row_count != NO_ROW_COUNT_LIMIT) {
 		result += " LIMIT " + to_string(row_count);
 	}
